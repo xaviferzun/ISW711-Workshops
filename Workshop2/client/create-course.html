@@ -1,0 +1,20 @@
+<h2>Create Course</h2>
+
+<input id="name" placeholder="Course name">
+<input id="credits" type="number" placeholder="Credits">
+<button onclick="createCourse()">Create</button>
+
+<script>
+async function createCourse() {
+  await fetch("http://localhost:3000/courses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: document.getElementById("name").value,
+      credits: Number(document.getElementById("credits").value)
+    })
+  });
+
+  alert("Course created");
+}
+</script>

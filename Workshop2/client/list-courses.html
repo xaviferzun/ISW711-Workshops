@@ -2,19 +2,81 @@
 <ul id="courses"></ul>
 
 <script>
-async function loadCourses() {
-  const res = await fetch("http://localhost:3000/courses");
-  const data = await res.json();
+  async function loadCourses() {
+    const res = await fetch("http://localhost:3000/courses");
+    const data = await res.json();
 
-  const list = document.getElementById("courses");
-  list.innerHTML = "";
+    const list = document.getElementById("courses");
+    list.innerHTML = "";
 
-  data.forEach(c => {
-    const li = document.createElement("li");
-    li.textContent = `${c.name} (${c.credits} credits)`;
-    list.appendChild(li);
-  });
-}
+    data.forEach(c => {
+      const li = document.createElement("li"); //create list item
 
-loadCourses();
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = `${c.name} (${c.credits} credits) `; //show name and credits
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+
+      deleteBtn.onclick = async function () { 
+        await deleteCourse(c._id);
+      };
+
+      editBtn.onclick = function () {
+        editCourse(li, c);
+      };
+
+      li.appendChild(nameSpan);
+      li.appendChild(editBtn);
+      li.appendChild(deleteBtn);
+
+      list.appendChild(li);
+    });
+  }
+
+  //Function to delete a course by id
+  async function deleteCourse(id) {
+    await fetch(`http://localhost:3000/courses/${id}`, {
+      method: "DELETE"
+    });
+
+    loadCourses();
+  }
+
+  function editCourse(li, course) { //edit course details
+    li.innerHTML = "";
+
+    const nameInput = document.createElement("input");
+    nameInput.value = course.name;
+
+    const creditsInput = document.createElement("input");
+    creditsInput.type = "number";
+    creditsInput.value = course.credits;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save";
+
+    //function to save the edited course 
+    saveBtn.onclick = async function () {
+      await fetch(`http://localhost:3000/courses/${course._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nameInput.value,
+          credits: Number(creditsInput.value)
+        })
+      });
+
+      loadCourses();
+    };
+
+    li.appendChild(nameInput);
+    li.appendChild(creditsInput);
+    li.appendChild(saveBtn);
+  }
+
+  loadCourses();
 </script>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gestionar Profesores</title>
+  </head>
+  <body>
+    <button onclick="ViewCourses()">Ver Cursos</button>
+    <hr>
+      <h2>Crear - Editar Profesor</h2>
+      <input id="name" placeholder="Nombre">
+      <input id="lastName" placeholder="Apellido">
+      <input id="cedula" placeholder="Cédula">
+      <input id="age" type="number" placeholder="Edad">
+      <button onclick="saveProfessor()">Guardar</button>
+    <hr>
+
+    <h2>Lista de Profesores</h2>
+
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Apellido</th>
+          <th>Cedula</th>
+          <th>Edad</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="professorsTable"></tbody>
+    </table>
+
+    <script>
+
+      let editingProfessorId = null;
+
+      //LOAD
+      async function loadProfessors() {
+        //Hago fetch a profesores para mostrar la lista y también para cargar el select de profesores en cursos
+        const res = await fetch("http://localhost:3000/professors");
+        const professors = await res.json();
+
+        const table = document.getElementById("professorsTable");
+        table.innerHTML = "";
+
+        //Recorro cada profesor para crear una fila en la tabla
+        professors.forEach(p => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${p.name}</td>
+            <td>${p.lastName}</td>
+            <td>${p.cedula}</td>
+            <td>${p.age}</td>
+            <td>
+              <button onclick="editProfessor('${p._id}')">Edit</button>
+              <button onclick="deleteProfessor('${p._id}')">Delete</button>
+            </td>
+          `;
+
+          table.appendChild(row); //Agrego la fila
+        });
+      }
+
+      //SAVE - Aca uso Post y Put 
+      async function saveProfessor() {
+        const data = {
+          name: document.getElementById("name").value,
+          lastName: document.getElementById("lastName").value,
+          cedula: document.getElementById("cedula").value,
+          age: Number(document.getElementById("age").value)
+        };
+
+        //Si editingProfessorId tiene valor, es una edición PUT sino es una creación POST
+        if (editingProfessorId) {
+          await fetch(`http://localhost:3000/professors/${editingProfessorId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+          editingProfessorId = null;
+          //Recargar cursos para actualizar el select de profesores
+        } else {
+          await fetch("http://localhost:3000/professors", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+        }
+
+        clearForm();
+        loadProfessors();
+      }
+
+      //EDIT
+      async function editProfessor(id) {
+        //Hago fetch a profesores para obtener la información y luego cargarla en el formulario
+        const res = await fetch("http://localhost:3000/professors");
+        const professors = await res.json();
+        const professor = professors.find(p => p._id === id);
+
+        document.getElementById("name").value = professor.name;
+        document.getElementById("lastName").value = professor.lastName;
+        document.getElementById("cedula").value = professor.cedula;
+        document.getElementById("age").value = professor.age;
+
+        editingProfessorId = id;
+      }
+
+      //DELETE
+      async function deleteProfessor(id) {
+        //Verifico si el profesor tiene cursos asignados antes de eliminarlo
+        await fetch(`http://localhost:3000/professors/${id}`, {
+          method: "DELETE"
+        });
+
+        loadProfessors();
+      }
+
+      //lumpiar
+      function clearForm() {
+        document.getElementById("name").value = "";
+        document.getElementById("lastName").value = "";
+        document.getElementById("cedula").value = "";
+        document.getElementById("age").value = "";
+      }
+
+      loadProfessors();
+
+      function ViewCourses() {
+        window.location.href = "courses.html";
+      }
+
+    </script>
+  </body>
+</html>

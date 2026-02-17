@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gestionar Cursos</title>
+  </head>
+  <body>
+    <button onclick="ViewProfessors()">Ver Profesores</button>
+    <hr>
+      <h2>Crear - Editar Curso</h2>
+      <input id="name" placeholder="Nombre del Curso">
+      <input id="code" placeholder="Codigo del Curso">
+      <input id="description" placeholder="Descripcion del Curso">
+
+      <select id="professorSelect">
+        <option value="">Seleccionar Profesor</option>
+      </select>
+      <button onclick="saveCourse()">Guardar</button>
+    <hr>
+
+    <h2>Lista de Cursos</h2>
+
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Codigo</th>
+          <th>Descripcion</th>
+          <th>Profesor</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="coursesTable"></tbody>
+    </table>
+
+    <script>
+      let editingCourseId = null;
+
+      //LOAD PROFESSORS 
+      async function loadProfessors() {  
+        //Uso fetch para cargar profesores en la lista y el select de profesores en cursos
+        const res = await fetch("http://localhost:3000/professors");
+        const professors = await res.json();
+        const select = document.getElementById("professorSelect");
+        select.innerHTML = '<option value="">Select Professor</option>';
+
+        professors.forEach(p => {
+          const option = document.createElement("option");
+          option.value = p._id;
+          option.textContent = `${p.name} ${p.lastName}`;
+          select.appendChild(option);
+        });
+      }
+
+      //LOAD COURSES
+      async function loadCourses() {
+        const res = await fetch("http://localhost:3000/courses");
+        const courses = await res.json();
+        const table = document.getElementById("coursesTable");
+        table.innerHTML = "";
+        courses.forEach(c => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${c.name}</td>
+            <td>${c.code}</td>
+            <td>${c.description}</td>
+            <td>${c.professorId ? c.professorId.name + " " + c.professorId.lastName : ""}</td>
+            <td>
+              <button onclick="editCourse('${c._id}')">Edit</button>
+              <button onclick="deleteCourse('${c._id}')">Delete</button>
+            </td>
+          `;
+
+          table.appendChild(row); //Agrego la fila
+        });
+      }
+
+      //SAVE COURSE
+      async function saveCourse() {
+        const data = {
+          name: document.getElementById("name").value,
+          code: document.getElementById("code").value,
+          description: document.getElementById("description").value,
+          professorId: document.getElementById("professorSelect").value
+        };
+
+        if (editingCourseId) {
+          //Si editingCourseId tiene valor hago PUT, sino POST
+          await fetch(`http://localhost:3000/courses/${editingCourseId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+          editingCourseId = null;
+        } else {
+          await fetch("http://localhost:3000/courses", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+        }
+
+        clearForm();
+        loadCourses();
+      }
+
+      //EDIT
+      async function editCourse(id) {
+        const res = await fetch("http://localhost:3000/courses");
+        const courses = await res.json();
+        const course = courses.find(c => c._id === id);
+
+        document.getElementById("name").value = course.name;
+        document.getElementById("code").value = course.code;
+        document.getElementById("description").value = course.description;
+        document.getElementById("professorSelect").value = course.professorId._id;
+
+        editingCourseId = id;
+      }
+
+      //DELETE
+      async function deleteCourse(id) {
+        await fetch(`http://localhost:3000/courses/${id}`, {
+          method: "DELETE"
+        });
+        loadCourses();
+      }
+
+      //limpiar
+      function clearForm() {
+        document.getElementById("name").value = "";
+        document.getElementById("code").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("professorSelect").value = "";
+      }
+
+      loadProfessors();
+      loadCourses();
+
+      function ViewProfessors() {
+        window.location.href = "professors.html";
+      }  
+
+    </script>
+  </body>
+</html>

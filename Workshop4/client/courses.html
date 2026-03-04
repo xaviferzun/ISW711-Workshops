@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gestionar Cursos</title>
+  </head>
+  <body>
+    <button onclick="ViewProfessors()">Ver Profesores</button>
+    <button onclick="logout()">Cerrar sesión</button>
+    <hr>
+
+    <h2>Crear - Editar Curso</h2>
+    <input id="name" placeholder="Nombre del Curso">
+    <input id="code" placeholder="Codigo del Curso">
+    <input id="description" placeholder="Descripcion del Curso">
+
+    <select id="professorSelect">
+      <option value="">Seleccionar Profesor</option>
+    </select>
+    <button onclick="saveCourse()">Guardar</button>
+
+    <hr>
+
+    <h2>Lista de Cursos</h2>
+
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Codigo</th>
+          <th>Descripcion</th>
+          <th>Profesor</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="coursesTable"></tbody>
+    </table>
+
+    <script>
+
+      //Variables globales
+      const API = "http://localhost:3000";
+      let editingCourseId = null;
+
+      function getAuthHeaders() {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          window.location.href = "login.html";
+        }
+
+        return {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        };
+      }
+
+      //Función para cargar los cursos desde el backend
+      async function loadProfessors() {
+        const res = await fetch(`${API}/professors`, {
+          headers: getAuthHeaders()
+        });
+
+        if (res.status === 401) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        const professors = await res.json();
+        const select = document.getElementById("professorSelect");
+        select.innerHTML = '<option value="">Seleccionar Profesor</option>';
+
+        professors.forEach(p => {
+          const option = document.createElement("option");
+          option.value = p._id;
+          option.textContent = `${p.name} ${p.lastName}`;
+          select.appendChild(option);
+        });
+      }
+
+      //Función para cargar los cursos desde el backend
+      async function loadCourses() {
+        const res = await fetch(`${API}/courses`, {
+          headers: getAuthHeaders()
+        });
+
+        if (res.status === 401) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        //Obtiene los cursos y los muestra en la tabla
+        const courses = await res.json();
+        const table = document.getElementById("coursesTable");
+        table.innerHTML = "";
+
+        courses.forEach(c => {
+          const row = document.createElement("tr");
+
+          //Agrega los datos del curso a la fila
+          row.innerHTML = `
+            <td>${c.name}</td>
+            <td>${c.code}</td>
+            <td>${c.description}</td>
+            <td>${c.professorId ? c.professorId.name + " " + c.professorId.lastName : ""}</td>
+            <td>
+              <button onclick="editCourse('${c._id}')">Edit</button>
+              <button onclick="deleteCourse('${c._id}')">Delete</button>
+            </td>
+          `;
+
+          table.appendChild(row);
+        });
+      }
+
+      //Función para guardar un nuevo curso o actualizar uno existente
+      async function saveCourse() {
+        const data = {
+          name: document.getElementById("name").value,
+          code: document.getElementById("code").value,
+          description: document.getElementById("description").value,
+          professorId: document.getElementById("professorSelect").value
+        };
+
+        //Si editingcourseid tiene valor es una actualización, sino es un nuevo curso
+        if (editingCourseId) {
+          await fetch(`${API}/courses/${editingCourseId}`, {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          editingCourseId = null;
+        } else {
+          await fetch(`${API}/courses`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+        }
+
+        clearForm();
+        loadCourses();
+      }
+
+      //Función para cargar los datos de un curso en el formulario para editar
+      async function editCourse(id) {
+        const res = await fetch(`${API}/courses`, {
+          headers: getAuthHeaders()
+        });
+
+        const courses = await res.json();
+        const course = courses.find(c => c._id === id);
+
+        //Carga los datos del curso a los campos del formulario
+        document.getElementById("name").value = course.name;
+        document.getElementById("code").value = course.code;
+        document.getElementById("description").value = course.description;
+        document.getElementById("professorSelect").value = course.professorId._id;
+
+        editingCourseId = id;
+      }
+
+      //Función para eliminar un curso
+      async function deleteCourse(id) {
+        await fetch(`${API}/courses/${id}`, {
+          method: "DELETE",
+          headers: getAuthHeaders()
+        });
+
+        loadCourses();
+      }
+
+      //Limpir forumulario
+      function clearForm() {
+        document.getElementById("name").value = "";
+        document.getElementById("code").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("professorSelect").value = "";
+      }
+
+      function ViewProfessors() {
+        window.location.href = "professors.html";
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+
+      loadProfessors();
+      loadCourses();
+
+    </script>
+  </body>
+</html>

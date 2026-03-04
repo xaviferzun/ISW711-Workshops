@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gestionar Profesores</title>
+  </head>
+  <body>
+    <button onclick="ViewCourses()">Ver Cursos</button>
+    <button onclick="logout()">Cerrar sesión</button>
+    <hr>
+
+    <h2>Crear - Editar Profesor</h2>
+    <input id="name" placeholder="Nombre">
+    <input id="lastName" placeholder="Apellido">
+    <input id="cedula" placeholder="Cedula">
+    <input id="age" type="number" placeholder="Edad">
+    <button onclick="saveProfessor()">Guardar</button>
+
+    <hr>
+
+    <h2>Lista de Profesores</h2>
+
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Apellido</th>
+          <th>Cedula</th>
+          <th>Edad</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="professorsTable"></tbody>
+    </table>
+
+    <script>
+
+      //Variables globales
+      const API = "http://localhost:3000";
+      let editingProfessorId = null;
+
+      //Función para obtener los headers de autenticación
+      function getAuthHeaders() {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          window.location.href = "login.html";
+        }
+
+        return {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        };
+      }
+
+      //Función para cargar los profesores desde el backend
+      async function loadProfessors() {
+        const res = await fetch(`${API}/professors`, {
+          headers: getAuthHeaders()
+        });
+
+        if (res.status === 401) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        const professors = await res.json();
+
+        const table = document.getElementById("professorsTable");
+        table.innerHTML = "";
+
+        //Itera sobre los profesores y agregarlos a la tabla
+        professors.forEach(p => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${p.name}</td>
+            <td>${p.lastName}</td>
+            <td>${p.cedula}</td>
+            <td>${p.age}</td>
+            <td>
+              <button onclick="editProfessor('${p._id}')">Edit</button>
+              <button onclick="deleteProfessor('${p._id}')">Delete</button>
+            </td>
+          `;
+          table.appendChild(row);
+        });
+      }
+
+      //Función para guardar un nuevo profesor o actualizar uno existente
+      async function saveProfessor() {
+        const data = {
+          name: document.getElementById("name").value,
+          lastName: document.getElementById("lastName").value,
+          cedula: document.getElementById("cedula").value,
+          age: Number(document.getElementById("age").value)
+        };
+
+        if (editingProfessorId) {
+          await fetch(`${API}/professors/${editingProfessorId}`, {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+          editingProfessorId = null;
+        } else {
+          await fetch(`${API}/professors`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+          });
+        }
+
+        clearForm();
+        loadProfessors();
+      }
+
+      //Función para cargar los datos de un profesor en el formulario para editar
+      async function editProfessor(id) {
+        const res = await fetch(`${API}/professors`, {
+          headers: getAuthHeaders()
+        });
+
+        const professors = await res.json();
+        const professor = professors.find(p => p._id === id);
+
+        document.getElementById("name").value = professor.name;
+        document.getElementById("lastName").value = professor.lastName;
+        document.getElementById("cedula").value = professor.cedula;
+        document.getElementById("age").value = professor.age;
+
+        editingProfessorId = id;
+      }
+
+      //Función para eliminar un profesor
+      async function deleteProfessor(id) {
+        await fetch(`${API}/professors/${id}`, {
+          method: "DELETE",
+          headers: getAuthHeaders()
+        });
+
+        loadProfessors();
+      }
+
+      //Limpir forumulario
+      function clearForm() {
+        document.getElementById("name").value = "";
+        document.getElementById("lastName").value = "";
+        document.getElementById("cedula").value = "";
+        document.getElementById("age").value = "";
+      }
+
+      function ViewCourses() {
+        window.location.href = "courses.html";
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+
+      loadProfessors();
+
+    </script>
+  </body>
+</html>
